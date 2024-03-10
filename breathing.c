@@ -1,4 +1,5 @@
 #include "breathing.h"
+#include "cie1931.h"
 
 static pin_t breathing_pins[] = BREATHING_PINS;
 
@@ -56,6 +57,8 @@ void breathing_init(void) {
          return; // Invalid channel
      }
      breathing_channels[channel].active = false;
+    // Turn LED off
+    pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, 0));
 
      // Check if all channels are inactive, and if so, stop the timer
      bool any_active = false;
@@ -70,34 +73,47 @@ void breathing_init(void) {
      }
  }
 
-// See http://jared.geek.nz/2013/feb/linear-led-pwm
-static uint16_t cie_lightness(uint16_t v) {
-    if (v <= 5243)    // if below 8% of max
-        return v / 9; // same as dividing by 900%
-    else {
-        uint32_t y = (((uint32_t)v + 10486) << 8) / (10486 + 0xFFFFUL); // add 16% of max and compare
-        // to get a useful result with integer division, we shift left in the expression above
-        // and revert what we've done again after squaring.
-        y = y * y * y >> 8;
-        if (y > 0xFFFFUL) { // prevent overflow
-            return 0xFFFFU;
-        } else {
-            return (uint16_t)y;
-        }
-    }
+// See
+// https://web.archive.org/web/20230906171704/https://jared.geek.nz/2013/feb/linear-led-pwm
+// Set at input and output level 1000, representing 100.0 percent.
+static uint16_t cie_lightness_correction(uint16_t v) {
+    return cie[v];
 }
 
-static uint32_t rescale_limit_val(uint32_t val) {
-    // rescale the supplied backlight value to be in terms of the value limit
-    return (val * (BACKLIGHT_LIMIT_VAL + 1)) / 256;
-}
-
-/* To generate breathing curve in python:
- * from math import sin, pi; [int(sin(x/128.0*pi)**4*255) for x in range(128)]
+/* To generate basic sin % breathing curve in python:
+ * from math import sin, pi; breathing_steps = 255; print([int(sin(x/breathing_steps*pi)**4*100) for x in range(breathing_steps)])
  */
-static const uint8_t breathing_table[BREATHING_STEPS] = {1,1,1,1,1,1,1,1,1,1,1, 1, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 17, 20, 24, 28, 32, 36, 41, 46, 51, 57, 63, 70, 76, 83, 91, 98, 106, 113, 121, 129, 138, 146, 154, 162, 170, 178, 185, 193, 200, 207, 213, 220, 225, 231, 235, 240, 244, 247, 250, 252, 253, 254, 255, 254, 253, 252, 250, 247, 244, 240, 235, 231, 225, 220, 213, 207, 200, 193, 185, 178, 170, 162, 154, 146, 138, 129, 121, 113, 106, 98, 91, 83, 76, 70, 63, 57, 51, 46, 41, 36, 32, 28, 24, 20, 17, 15, 12, 10, 8, 6, 5, 4, 3, 2, 1, 1,1,1,1,1,1,1,1,1,1, 1};
+static const uint16_t breathing_table[BREATHING_STEPS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 14, 17, 19, 21, 24, 27, 30, 33, 37, 41, 45, 50, 54, 59, 65, 70, 76, 83, 89, 96, 103, 111, 119, 127, 136, 145, 154, 164, 174, 184, 195, 205, 217, 228, 240, 253, 265, 278, 291, 304, 318, 332, 346, 361, 375, 390, 405, 420, 436, 451, 467, 482, 498, 514, 530, 546, 562, 578, 594, 610, 626, 642, 657, 673, 688, 704, 719, 734, 748, 763, 777, 791, 804, 818, 831, 843, 855, 867, 879, 889, 900, 910, 920, 929, 937, 945, 953, 960, 966, 972, 978, 983, 987, 990, 993, 996, 998, 999, 999, 999, 999, 998, 996, 993, 990, 987, 983, 978, 972, 966, 960, 953, 945, 937, 929, 920, 910, 900, 889, 879, 867, 855, 843, 831, 818, 804, 791, 777, 763, 748, 734, 719, 704, 688, 673, 657, 642, 626, 610, 594, 578, 562, 546, 530, 514, 498, 482, 467, 451, 436, 420, 405, 390, 375, 361, 346, 332, 318, 304, 291, 278, 265, 253, 240, 228, 217, 205, 195, 184, 174, 164, 154, 145, 136, 127, 119, 111, 103, 96, 89, 83, 76, 70, 65, 59, 54, 50, 45, 41, 37, 33, 30, 27, 24, 21, 19, 17, 14, 13, 11, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 static void breathing_callback(virtual_timer_t *vtp, void *p);
+
+static void breathing_callback(virtual_timer_t *vtp, void *p) {
+    for (uint8_t channel = 0; channel < MAX_BREATHING_CHANNELS; channel++) {
+        if (!breathing_channels[channel].active) {
+            continue; // Skip inactive channels
+        }
+
+        int8_t breathing_period = breathing_channels[channel].period;
+        uint16_t interval = (uint16_t)breathing_period * 256 / BREATHING_STEPS;
+
+        // Update the counter for this channel
+        breathing_channels[channel].counter = (breathing_channels[channel].counter + 1) % (breathing_period * 256);
+        uint8_t index = breathing_channels[channel].counter / interval % BREATHING_STEPS;
+        // Percent is set with 100% = 10000. We are using a resolution
+        // of 1000 for cie correction, so * 10 to get to actual
+        // percent.
+        uint32_t percent = 10 * cie_lightness_correction(breathing_table[index]);
+
+        if (percent == 0){
+            // Keep a tiny amount of power in to prevent abrupt blink
+            // off.
+            percent = 1;
+        }
+        chSysLockFromISR();
+        pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, percent * 10));
+        chSysUnlockFromISR();
+    }
+}
 
 bool is_breathing(void) {
     return chVTIsArmed(&breathing_vt);
@@ -110,33 +126,4 @@ void breathing_enable(void) {
 
 void breathing_disable(void) {
     chVTReset(&breathing_vt);
-
-    // Restore backlight level
-    // backlight_set(get_backlight_level());
 }
-
-// Use this before the cie_lightness function.
-static inline uint16_t scale_backlight(uint16_t v) {
-    return v;
-    // return v / BACKLIGHT_LEVELS * get_backlight_level();
-}
-
-static void breathing_callback(virtual_timer_t *vtp, void *p) {
-     for (uint8_t channel = 0; channel < MAX_BREATHING_CHANNELS; channel++) {
-         if (!breathing_channels[channel].active) {
-             continue; // Skip inactive channels
-         }
-
-         int8_t breathing_period = breathing_channels[channel].period;
-         uint16_t interval = (uint16_t)breathing_period * 256 / BREATHING_STEPS;
-
-         // Update the counter for this channel
-         breathing_channels[channel].counter = (breathing_channels[channel].counter + 1) % (breathing_period * 256);
-         uint8_t index = breathing_channels[channel].counter / interval % BREATHING_STEPS;
-         uint32_t duty = cie_lightness(rescale_limit_val(scale_backlight(breathing_table[index] * 256)));
-
-         chSysLockFromISR();
-         pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_FRACTION_TO_WIDTH(BREATHING_LED_PWM, 0xFFFF, duty));
-         chSysUnlockFromISR();
-     }
- }

@@ -6,10 +6,6 @@
 extern "C" {
 #endif
 
-#ifndef BACKLIGHT_LIMIT_VAL
-#    define BACKLIGHT_LIMIT_VAL 255
-#endif
-
 // Define the maximum number of breathing channels
 #define MAX_BREATHING_CHANNELS 4
 
@@ -19,7 +15,7 @@ extern "C" {
 #endif
 
 // Define the number of steps in the breathing curve
-#define BREATHING_STEPS 128
+#define BREATHING_STEPS 256
 
 // Type definition for PWM channel
 typedef uint8_t pwmchannel_t;
@@ -27,7 +23,7 @@ typedef uint8_t pwmchannel_t;
 // Structure to hold the state for each breathing channel
 typedef struct {
     bool active; // Whether the breathing effect is active on this channel
-    int8_t period; // Breathing period for this channel
+    int8_t period; // Breathing period for this channel in seconds
     uint16_t counter; // Counter for the breathing effect
 } breathing_channel_state_t;
 
