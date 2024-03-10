@@ -15,7 +15,7 @@ This is set up for STM32 PWM only.
 
 This is provided as-is, you'll probably need to modify it for your
 specific setup. Just putting it out in case it's useful.
-Currently it assumes all the pins you are using are on the same timer.
+Currently it assumes all the pins you are using are on the same timer
 
 ## Usage
 
@@ -57,7 +57,8 @@ void start_breathing(uint8_t channel, int8_t period);
 
 - `channel`: The LED channel to start the breathing effect on. Specific to
   each pin (assuming they use the same timer).
-- `period`: The period of the breathing cycle in [time unit].
+- `period`: The period of the breathing cycle in seconds, i.e., how long it takes to
+  breathe a full cycle.
 
 ### Stopping the Breathing Effect
 
@@ -84,6 +85,8 @@ Define these in `config.h`
 - `BREATHING_PINS`: Define this macro with the array of pins used for breathing LEDs, e.g. `#define BREATHING_PINS { A2, A3 }; 
 - `N_BREATHING_PINS`: Size of array above.
 - `BREATHING_LED_PWM`: Name of the timer you are using. E.g. `#define BREATHING_LED_PWM &PWMD2`
+- `PWM_OUTPUT_ACTIVE_HL`: 1 if your LED is on when voltage is applied,
+  0 if it is on when driven low.
 <!-- - `MAX_BREATHING_CHANNELS`: The maximum number of channels that can be controlled. Defaults to 4, which is probably the number of channels that timer has anyway.  -->
 <!-- - `BREATHING_STEPS`: The number of steps in the breathing curve. -->
 
