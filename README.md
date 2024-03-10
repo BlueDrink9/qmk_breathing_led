@@ -10,8 +10,12 @@ This is set up for STM32 PWM only.
 ## Features
 
 - Control the breathing effect on multiple LED channels.
-- Configure the breathing period for each channel independently.
+- Configure the breathing period (how fast it breathes) for each channel independently.
 - Enable or disable the breathing effect dynamically.
+
+This is provided as-is, you'll probably need to modify it for your
+specific setup. Just putting it out in case it's useful.
+Currently it assumes all the pins you are using are on the same timer.
 
 ## Usage
 
@@ -51,7 +55,8 @@ To start the breathing effect on a specific channel with a specified period, use
 void start_breathing(uint8_t channel, int8_t period);
 ```
 
-- `channel`: The LED channel to start the breathing effect on.
+- `channel`: The LED channel to start the breathing effect on. Specific to
+  each pin (assuming they use the same timer).
 - `period`: The period of the breathing cycle in [time unit].
 
 ### Stopping the Breathing Effect
