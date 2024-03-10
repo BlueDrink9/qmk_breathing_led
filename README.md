@@ -78,6 +78,26 @@ To check if any channel is currently running a breathing effect, use:
 bool is_breathing(void);
 ```
 
+### Custom breathing pattern
+
+By default, this uses a sin pattern.
+To generate basic sin % breathing curve in python:
+
+```python
+from math import sin, pi
+breathing_steps = 255
+print([int(sin(x/breathing_steps*pi)**4*100) for x in range(breathing_steps)])
+```
+
+To pass custom ones:
+
+```c
+void start_breathing_with_pattern(uint8_t channel, int8_t period, const uint16_t *step_table);
+```
+
+Where `step_table` is a pointer to a declared array of BREATHING_STEPS percentage values
+(out of 1000, where 100% = 1000 and 0.5% = 5).
+
 ## Configuration
 
 Define these in `config.h`
