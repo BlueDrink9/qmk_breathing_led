@@ -42,6 +42,12 @@ void stop_breathing(uint8_t channel);
 bool is_breathing(void);
 void breathing_enable(void);
 void breathing_disable(void);
+// Turn on 100%
+void pwm_on(uint8_t channel);
+// Turn off
+void pwm_off(uint8_t channel);
+// Turn to specified percentage (out of 10000)
+void pwm_set(uint8_t channel, uint8_t percent);
 
 #ifdef __cplusplus
 }

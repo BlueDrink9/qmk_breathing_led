@@ -43,40 +43,39 @@ void start_breathing(uint8_t channel, int8_t period) {
 }
 
 void start_breathing_with_pattern(uint8_t channel, int8_t period, const uint16_t step_table[BREATHING_STEPS]) {
-     if (channel >= MAX_BREATHING_CHANNELS) {
-         return; // Invalid channel
-     }
-     breathing_channels[channel].active = true;
-     breathing_channels[channel].period = period;
-     breathing_channels[channel].step_table = step_table;
-     breathing_channels[channel].counter = 0;
+    if (channel >= MAX_BREATHING_CHANNELS) {
+        return; // Invalid channel
+    }
+    breathing_channels[channel].active = true;
+    breathing_channels[channel].period = period;
+    breathing_channels[channel].step_table = step_table;
+    breathing_channels[channel].counter = 0;
 
-     // If the timer is not already running, start it
-     if (!is_breathing()) {
-         breathing_enable();
-     }
- }
+    // If the timer is not already running, start it
+    if (!is_breathing()) {
+        breathing_enable();
+    }
+}
 
- void stop_breathing(uint8_t channel) {
-     if (channel >= MAX_BREATHING_CHANNELS) {
-         return; // Invalid channel
-     }
-     breathing_channels[channel].active = false;
-    // Turn LED off
+void stop_breathing(uint8_t channel) {
+    if (channel >= MAX_BREATHING_CHANNELS) {
+        return; // Invalid channel
+    }
+    breathing_channels[channel].active = false;
     pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, 0));
 
-     // Check if all channels are inactive, and if so, stop the timer
-     bool any_active = false;
-     for (int i = 0; i < MAX_BREATHING_CHANNELS; i++) {
-         if (breathing_channels[i].active) {
-             any_active = true;
-             break;
-         }
-     }
-     if (!any_active) {
-         breathing_disable();
-     }
- }
+    // Check if all channels are inactive, and if so, stop the timer
+    bool any_active = false;
+    for (int i = 0; i < MAX_BREATHING_CHANNELS; i++) {
+        if (breathing_channels[i].active) {
+            any_active = true;
+            break;
+        }
+    }
+    if (!any_active) {
+        breathing_disable();
+    }
+}
 
 // See
 // https://web.archive.org/web/20230906171704/https://jared.geek.nz/2013/feb/linear-led-pwm
@@ -126,4 +125,18 @@ void breathing_enable(void) {
 
 void breathing_disable(void) {
     chVTReset(&breathing_vt);
+}
+
+void pwm_on(uint8_t channel){
+    pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, 10000));
+}
+
+void pwm_set(uint8_t channel, uint8_t percent){
+    pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, percent));
+}
+
+
+void pwm_off(uint8_t channel){
+    pwmEnableChannelI(BREATHING_LED_PWM, channel, PWM_PERCENTAGE_TO_WIDTH(BREATHING_LED_PWM, 0));
+    stop_breathing(channel);
 }

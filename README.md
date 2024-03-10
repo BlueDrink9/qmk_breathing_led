@@ -78,6 +78,16 @@ To check if any channel is currently running a breathing effect, use:
 bool is_breathing(void);
 ```
 
+### Other convenience functions
+```c
+// Turn on 100%
+void pwm_on(uint8_t channel);
+// Turn off
+void pwm_off(uint8_t channel);
+// Turn to specified percentage (out of 10000)
+void pwm_set(uint8_t channel, uint8_t percent);
+```
+
 ### Custom breathing pattern
 
 By default, this uses a sin pattern.
